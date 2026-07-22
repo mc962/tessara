@@ -1,4 +1,4 @@
-# brandcc
+# tessera
 
 Developer-focused brand asset generator. Give it a source logo (SVG or PNG)
 and it generates the platform-specific assets a web/app project needs:
@@ -12,16 +12,16 @@ with one reusable core library and two thin interfaces on top of it:
 
 ```
 packages/
-  brandcc-core/     Image generation logic (Pillow + CairoSVG). No CLI/web deps.
+  tessera-core/     Image generation logic (Pillow + CairoSVG). No CLI/web deps.
 apps/
-  brandcc-cli/      Typer CLI: `brandcc generate logo.svg --preset web`
-  brandcc-server/   FastAPI server: upload -> generate -> download zip
+  tessera-cli/      Typer CLI: `tessera generate logo.svg --preset web`
+  tessera-server/   FastAPI server: upload -> generate -> download zip
 ```
 
-`brandcc-core` exposes a plain Python API:
+`tessera-core` exposes a plain Python API:
 
 ```python
-from brandcc import BrandAssetBuilder
+from tessera import BrandAssetBuilder
 
 builder = BrandAssetBuilder("logo.svg")
 builder.generate(["favicon"])
@@ -42,14 +42,14 @@ package/app and run `uv sync` there.
 ## Usage
 
 ```bash
-uv run --package brandcc-cli brandcc generate logo.svg --preset web --output ./out
-uv run --package brandcc-cli brandcc presets
+uv run --package tessera-cli tessera generate logo.svg --preset web --output ./out
+uv run --package tessera-cli tessera presets
 ```
 
 ## Tests
 
 ```bash
-uv run --package brandcc-core pytest packages/brandcc-core/tests
+uv run --package tessera-core pytest packages/tessera-core/tests
 ```
 
 ## Status
