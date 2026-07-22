@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Error - {{ settings.page_title }}{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h2>Error</h2>
+    <p class="error-message">{{ error }}</p>
+    <a href="/" class="button">Back to Home</a>
+</div>
+{% endblock %}

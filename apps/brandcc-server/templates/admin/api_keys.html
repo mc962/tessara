@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}API Keys — {{ settings.project_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>API Keys</h2>
+    <form method="post" action="/admin/logout">
+        <button type="submit" class="btn-link">Sign out</button>
+    </form>
+</div>
+
+<div id="new-key-display" class="alert alert-ok" style="display:none;">
+    <strong>Key created.</strong> Copy it now — it will not be shown again.<br>
+    <code class="key-display" id="new-key-value"></code>
+</div>
+
+<section class="card">
+    <h3>Create key</h3>
+    <div class="inline-form">
+        <input type="text" id="create-name" placeholder="Key name" required>
+        <label class="checkbox-label">
+            <input type="checkbox" id="create-superuser"> Superuser
+        </label>
+        <button onclick="createKey()">Create</button>
+    </div>
+</section>
+
+<script>
+async function createKey() {
+    const name = document.getElementById('create-name').value.trim();
+    if (!name) { alert('Name is required'); return; }
+    const isSuperuser = document.getElementById('create-superuser').checked;
+
+    const body = { name, is_superuser: isSuperuser };
+
+    const resp = await fetch('/api/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert('Error: ' + (err.detail || resp.status));
+        return;
+    }
+    const data = await resp.json();
+    document.getElementById('new-key-value').textContent = data.key;
+    document.getElementById('new-key-display').style.display = '';
+    document.getElementById('create-name').value = '';
+    document.getElementById('create-budget').value = '';
+    document.getElementById('create-superuser').checked = false;
+}
+</script>
+
+<section class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Prefix</th>
+                <th>Superuser</th>
+                <th>Active</th>
+                <th>Last used</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key in keys %}
+            <tr>
+                <td>{{ key.name }}</td>
+                <td><code>{{ key.key_prefix }}…</code></td>
+                <td>
+                    {% if key.is_superuser %}
+                        <span class="badge badge-ok">yes</span>
+                    {% else %}
+                        <span class="muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if key.is_active %}
+                        <span class="badge badge-ok">active</span>
+                    {% else %}
+                        <span class="badge badge-warn">disabled</span>
+                    {% endif %}
+                </td>
+                <td>{{ key.last_used_at.strftime("%Y-%m-%d %H:%M") if key.last_used_at else "—" }}</td>
+                <td>{{ key.created_at.strftime("%Y-%m-%d") }}</td>
+                <td class="row-actions">
+                    <form method="post" action="/admin/api-keys/{{ key.id }}/toggle">
+                        <button type="submit">{{ "Disable" if key.is_active else "Enable" }}</button>
+                    </form>
+                    <form method="post" action="/admin/api-keys/{{ key.id }}/delete"
+                          onsubmit="return confirm('Delete key {{ key.name }}?')">
+                        <button type="submit" class="btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="muted">No keys yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
