@@ -1,3 +1,7 @@
+# Used by deployment/Dockerfile (production) — its build context is this
+# directory. Dockerfile.dev uses the repo-root .dockerignore instead (its
+# context is the whole workspace).
+
 # Version control
 .git
 .gitignore
@@ -11,42 +15,36 @@ __pycache__
 *.so
 *.egg
 *.egg-info
-dist
 build
 .pytest_cache
 .mypy_cache
 .ruff_cache
+.coverage
+htmlcov/
 
 # Virtual environments
-venv
 .venv
+venv
 env
 ENV
+
+# Node — reinstalled/rebuilt in the frontend stage
+node_modules
+static/js/dist
 
 # IDE
 .vscode
 .idea
 *.swp
 *.swo
+*~
+.DS_Store
+*.iml
 
-# Deployment (don't copy deployment files into the image)
-deployment/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Local data / secrets — never bake these into an image
 data/
-
-# Environment
 .env
 .env.*
 
-# Documentation
-*.md
-docs/
-
 # Tests
 tests/
-.coverage
-htmlcov/

@@ -116,6 +116,15 @@ class Common(BaseSettings):
     session_secret: SecretStr = SecretStr("")
     session_max_age: int = 86400  # 24 hours
 
+    # Uploads — /generate and /api/generate. Superuser keys get a larger cap;
+    # regular keys are capped low since generation is open to any active key.
+    upload_max_bytes: int = 2 * 1024 * 1024  # 2 MB
+    upload_max_bytes_superuser: int = 20 * 1024 * 1024  # 20 MB
+
+    # Rate limiting — applies to /generate, /api/generate, and /admin/login.
+    rate_limit_generate: str = "10/minute"
+    rate_limit_login: str = "5/minute"
+
     @property
     def database_connection_string(self) -> str:
         return self.database.connection_string()

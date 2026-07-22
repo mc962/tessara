@@ -14,6 +14,7 @@ from tessera_server.web.dependencies.auth import (
     _SESSION_COOKIE,
     make_session_cookie,
 )
+from tessera_server.web.rate_limit import limiter
 from tessera_server.web.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,9 @@ _CTX = {"settings": application_settings}
 def _safe_next(next_path: str | None) -> str:
     if next_path and next_path.startswith("/") and not next_path.startswith("//"):
         return next_path
-    return "/admin/api-keys"
+    # Not /admin/api-keys — that's superuser-only and a non-superuser key
+    # would just bounce straight back to the login page.
+    return "/generate"
 
 
 @router.get("/admin/login", response_class=HTMLResponse)
@@ -39,6 +42,7 @@ async def get_login(
 
 
 @router.post("/admin/login", response_model=None)
+@limiter.limit(application_settings.rate_limit_login)
 async def post_login(
     request: Request,
     session: DatabaseSessionDependency,
@@ -46,11 +50,11 @@ async def post_login(
     next: str = Form(""),
 ) -> Union[HTMLResponse, RedirectResponse]:
     key = await api_key_repository.verify_key(session, api_key)
-    if not key or not key.is_superuser:
+    if not key:
         return templates.TemplateResponse(
             request,
             "admin/login.html",
-            {**_CTX, "error": "Invalid superuser key", "next": next},
+            {**_CTX, "error": "Invalid or inactive API key", "next": next},
             status_code=401,
         )
     token = make_session_cookie(key.id)

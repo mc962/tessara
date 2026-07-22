@@ -3,6 +3,9 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
@@ -14,12 +17,14 @@ from tessera_server.configuration.settings import application_settings
 from tessera_server.constants import PROJECT_ROOT
 from tessera_server.data.database.connection import get_sessionmanager
 from tessera_server.web.api import api_keys as api_keys_router
+from tessera_server.web.api import generate as generate_api_router
 from tessera_server.web.api import health as health_router
 from tessera_server.web.api import metrics as metrics_router
 from tessera_server.web.dependencies.auth import AdminLoginRequired
 from tessera_server.web.html import admin as admin_router
 from tessera_server.web.html import generate as generate_router
 from tessera_server.web.html import landings as landings_router
+from tessera_server.web.rate_limit import limiter
 
 
 configure_logging()
@@ -52,6 +57,10 @@ app.add_middleware(
     ProxyHeadersMiddleware, trusted_hosts=[application_settings.trusted_proxy_ip]
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 
 @app.exception_handler(AdminLoginRequired)
 async def admin_login_redirect(request: Request, __: AdminLoginRequired) -> RedirectResponse:
@@ -64,6 +73,7 @@ async def admin_login_redirect(request: Request, __: AdminLoginRequired) -> Redi
 app.include_router(health_router.router)
 app.include_router(metrics_router.router)
 app.include_router(api_keys_router.router)
+app.include_router(generate_api_router.router)
 app.include_router(admin_router.router)
 app.include_router(generate_router.router)
 app.include_router(landings_router.router)
@@ -74,3 +84,16 @@ app.mount(
     StaticFiles(directory=os.path.join(PROJECT_ROOT, "static")),
     name="static",
 )
+
+
+def run() -> None:
+    """Run the app directly with uvicorn — for quick local/dev use. Production
+    deployments use `gunicorn -c gunicorn.conf.py` instead (see deployment/)."""
+    import uvicorn
+
+    uvicorn.run(
+        "tessera_server.main:app",
+        host=application_settings.host or "127.0.0.1",
+        port=application_settings.port,
+        reload=os.environ.get("debug", "false").lower() == "true",
+    )

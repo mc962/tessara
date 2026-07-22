@@ -60,10 +60,11 @@ async def require_superuser_api_key(
     return key
 
 
-async def require_superuser_session(
+async def require_session(
     request: Request,
     session: DatabaseSessionDependency,
 ) -> ApiKey:
+    """Any active key's session — used by browser-facing pages that aren't admin-only, like /generate."""
     token = request.cookies.get(_SESSION_COOKIE)
     if not token:
         raise AdminLoginRequired()
@@ -73,7 +74,15 @@ async def require_superuser_session(
     except (BadSignature, SignatureExpired, KeyError):
         raise AdminLoginRequired()
     key = await api_key_repository.get_by_id(session, key_id)
-    if not key or not key.is_active or not key.is_superuser:
+    if not key or not key.is_active:
+        raise AdminLoginRequired()
+    return key
+
+
+async def require_superuser_session(
+    key: Annotated[ApiKey, Depends(require_session)],
+) -> ApiKey:
+    if not key.is_superuser:
         raise AdminLoginRequired()
     return key
 
@@ -91,7 +100,7 @@ async def get_optional_session(
     except (BadSignature, SignatureExpired, KeyError):
         return None
     key = await api_key_repository.get_by_id(session, key_id)
-    if not key or not key.is_active or not key.is_superuser:
+    if not key or not key.is_active:
         return None
     return key
 
@@ -134,5 +143,7 @@ async def require_superuser_any(
 
 ApiKeyDependency = Annotated[ApiKey, Depends(require_api_key)]
 SuperuserApiKeyDependency = Annotated[ApiKey, Depends(require_superuser_api_key)]
+SessionDependency = Annotated[ApiKey, Depends(require_session)]
 SuperuserSessionDependency = Annotated[ApiKey, Depends(require_superuser_session)]
 SuperuserAnyDependency = Annotated[ApiKey, Depends(require_superuser_any)]
+OptionalSessionDependency = Annotated["ApiKey | None", Depends(get_optional_session)]

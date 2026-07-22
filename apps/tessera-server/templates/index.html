@@ -4,10 +4,6 @@
 
 {% block content %}
 <div class="hero">
-    <div class="eyebrow">
-        <span class="tile-mark"><span></span><span></span><span></span><span></span></span>
-        tessera
-    </div>
     <h1>One logo. Every size it's asked for.</h1>
     <p class="lede">
         Upload an SVG or PNG once. Tessera cuts it into the favicons, touch
@@ -15,7 +11,11 @@
         a zip — no ImageMagick incantations required.
     </p>
     <div class="hero-actions">
+        {% if is_authenticated %}
+        <a class="btn btn-primary" href="/generate">Generate assets</a>
+        {% else %}
         <a class="btn btn-primary" href="/generate">Sign in to generate assets</a>
+        {% endif %}
         <a class="btn" href="/docs">API docs</a>
     </div>
 

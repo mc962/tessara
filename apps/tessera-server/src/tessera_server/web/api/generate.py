@@ -1,11 +1,13 @@
-"""Generate UI — upload a source image, pick a preset, download a zip."""
+"""POST /api/generate — upload a source image, pick a preset, get a zip back.
 
-import logging
+Bearer-token only (any active key). This is the machine-facing counterpart to
+the session-gated /generate HTML page — used by tessera-cli's `web generate`.
+"""
+
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
-from tessera import PRESETS
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 
 from tessera_server.configuration.settings import application_settings
 from tessera_server.service.generation import (
@@ -14,36 +16,23 @@ from tessera_server.service.generation import (
     generate_zip,
     max_upload_bytes,
 )
-from tessera_server.web.dependencies.auth import SessionDependency
+from tessera_server.web.dependencies.auth import ApiKeyDependency
 from tessera_server.web.rate_limit import limiter
-from tessera_server.web.templates import templates
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter(tags=["generate"])
-
-_CTX = {"settings": application_settings, "presets": PRESETS}
-
-
-@router.get("/generate", response_class=HTMLResponse)
-async def get_generate(
-    request: Request,
-    _: SessionDependency,
-) -> HTMLResponse:
-    return templates.TemplateResponse(request, "generate.html", {**_CTX, "error": None})
+router = APIRouter(prefix="/api", tags=["generate"])
 
 
 @router.post("/generate", response_model=None)
 @limiter.limit(application_settings.rate_limit_generate)
-async def post_generate(
+async def api_generate(
     request: Request,
-    key: SessionDependency,
+    key: ApiKeyDependency,
     source: Annotated[UploadFile, File()],
     preset: Annotated[str, Form()] = "web",
     app_name: Annotated[str, Form()] = "",
     theme_color: Annotated[str, Form()] = "#ffffff",
     background_color: Annotated[str, Form()] = "#ffffff",
-) -> HTMLResponse | Response:
+) -> Response:
     body = await source.read()
     try:
         zip_bytes, download_name = generate_zip(
@@ -56,13 +45,9 @@ async def post_generate(
             max_bytes=max_upload_bytes(key.is_superuser),
         )
     except UploadTooLargeError as exc:
-        return templates.TemplateResponse(
-            request, "generate.html", {**_CTX, "error": str(exc)}, status_code=413
-        )
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except GenerationError as exc:
-        return templates.TemplateResponse(
-            request, "generate.html", {**_CTX, "error": str(exc)}, status_code=400
-        )
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return Response(
         content=zip_bytes,

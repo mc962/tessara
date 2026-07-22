@@ -11,3 +11,10 @@ build/
 .idea/
 *.iml
 .vscode/
+
+# Test
+.coverage
+
+# tessera generate / tessera web generate default output dir
+/output/
+apps/*/output/

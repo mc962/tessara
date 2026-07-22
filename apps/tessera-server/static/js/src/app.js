@@ -1,3 +1,5 @@
+import 'htmx.org';
+
 document.addEventListener("DOMContentLoaded", () => {
     const generateForm = document.querySelector("#generate-form");
     if (generateForm) {

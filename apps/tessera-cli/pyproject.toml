@@ -4,9 +4,12 @@ version = "0.1.0"
 description = "Command-line interface for tessera."
 requires-python = ">=3.13"
 dependencies = [
-    "tessera-core",
     "typer>=0.12",
+    "aiohttp>=3.13.5",
 ]
+
+[project.optional-dependencies]
+local = ["tessera-core>=0.1.0,<0.2"]
 
 [project.scripts]
 tessera = "tessera_cli.main:app"
