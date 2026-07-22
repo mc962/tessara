@@ -2,4 +2,4 @@
 
 Reserved for cross-package/integration tests (e.g. CLI ↔ core, server ↔ core).
 Unit tests for a single package live alongside it, e.g.
-`packages/tessera-core/tests/`.
+`packages/tessara-core/tests/`.

@@ -1,0 +1,61 @@
+[project]
+name = "tessara-server"
+version = "0.1.0"
+description = "FastAPI server for tessara asset generation."
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.13.5",
+    "alembic>=1.18.4",
+    "argon2-cffi>=25.1.0",
+    "tessara>=0.1.0,<0.2",
+    "fastapi[standard]>=0.139.2",
+    "gunicorn>=23.0.0",
+    "itsdangerous>=2.2.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.32",
+    "slowapi>=0.1.10",
+    "sqlalchemy[asyncio]>=2.0.50",
+    "starlette>=1.3.1",
+    "uvicorn[standard]>=0.51",
+    "uvicorn[standard]>=0.51.0",
+]
+
+[project.optional-dependencies]
+sqlite = ["aiosqlite>=0.22.0"]
+postgres = ["asyncpg>=0.31.0"]
+all-databases = ["aiosqlite>=0.22.0", "asyncpg>=0.31.0"]
+metrics = ["prometheus-client>=0.21.0"]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4",
+    "mypy>=2.1.0",
+    "pip-audit>=2.10.0",
+    "ruff>=0.15.14",
+]
+test = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+]
+
+[project.scripts]
+tessara-server = "tessara_server.main:run"
+tessara-server-admin = "tessara_server.cli:main"
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+exclude = ["tests/", "src/tessara_server/data/database/migration/"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tessara_server"]
+
+[tool.uv.sources]
+tessara = { workspace = true }

@@ -1,7 +1,7 @@
-# Root .dockerignore — used by apps/tessera-server/deployment/Dockerfile.dev,
-# whose build context is the whole workspace (it builds tessera-core from
+# Root .dockerignore — used by apps/tessara-server/deployment/Dockerfile.dev,
+# whose build context is the whole workspace (it builds tessara-core from
 # local source via the uv workspace, not a published package). The
-# production Dockerfile uses apps/tessera-server/.dockerignore instead — its
+# production Dockerfile uses apps/tessara-server/.dockerignore instead — its
 # context is just that directory.
 
 # Version control
@@ -32,7 +32,7 @@ ENV
 
 # Node — reinstalled/rebuilt in the frontend-builder stage
 node_modules
-apps/tessera-server/static/js/dist
+apps/tessara-server/static/js/dist
 
 # IDE
 .vscode
@@ -44,18 +44,18 @@ apps/tessera-server/static/js/dist
 *.iml
 
 # Not needed to build/run the server image
-apps/tessera-cli
+apps/tessara-cli
 docs/
 *.md
 
 # (deployment/ itself is kept — docker-entrypoint.sh lives there and is
-# COPYed as part of apps/tessera-server; it's tiny)
+# COPYed as part of apps/tessara-server; it's tiny)
 
 # Local data / secrets — never bake these into an image
-apps/tessera-server/data/
-apps/tessera-server/.env
-apps/tessera-server/.env.*
+apps/tessara-server/data/
+apps/tessara-server/.env
+apps/tessara-server/.env.*
 
 # Tests
-apps/tessera-server/tests/
-packages/tessera-core/tests/
+apps/tessara-server/tests/
+packages/tessara-core/tests/

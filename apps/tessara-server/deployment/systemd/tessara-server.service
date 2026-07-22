@@ -1,0 +1,39 @@
+[Unit]
+Description=Tessara server (Gunicorn, ASGI via uvicorn workers)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Just this package deployed here (e.g. `rsync -a apps/tessara-server/
+# root@lxc:/opt/tessara-server/`, minus .venv/data/.env) — tessara-core is
+# installed as a published dependency (`uv sync --no-sources`), not built
+# from a local monorepo checkout.
+WorkingDirectory=/opt/tessara-server
+
+# Migrations are a deliberate deploy step, not something that happens
+# implicitly on every service start/restart — run them yourself as part of
+# deploying, e.g.: /opt/tessara-server/.venv/bin/alembic upgrade head
+ExecStart=/opt/tessara-server/.venv/bin/gunicorn -c gunicorn.conf.py
+
+EnvironmentFile=/etc/tessara-server.env
+
+# LXC-safe settings — deliberately lighter than a bare-metal/VM hardening
+# profile would use (no user/group separation, no strict namespace isolation)
+# since those interact poorly with unprivileged LXC containers. Tighten this
+# if this ever runs directly on a VM instead.
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=full
+
+StandardOutput=journal
+StandardError=journal
+
+Restart=always
+RestartSec=3
+
+# LXC containers often need this to allow nested cgroups.
+Delegate=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Generate — {{ settings.project_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Generate assets</h2>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<section class="card">
+    <form id="generate-form" method="post" action="/generate" enctype="multipart/form-data">
+        <div class="field">
+            <label for="source">Source image</label>
+            <input type="file" id="source" name="source" accept=".svg,.png" required>
+            <p class="field-hint">SVG or PNG. The longest side is scaled to fit each output size.</p>
+        </div>
+
+        <div class="field">
+            <label>Preset</label>
+            <div class="preset-grid">
+                {% set descriptions = {
+                    "minimal": "Just favicon.ico and its PNGs — nothing else.",
+                    "web": "Favicon + Apple touch icon — the everyday pair.",
+                    "pwa": "Web preset plus Android icons and a web manifest.",
+                    "social": "Favicon + Open Graph card for link previews.",
+                    "everything": "Every asset group tessara knows about.",
+                } %}
+                {% for name, groups in presets.items() %}
+                <label class="preset-option">
+                    <input
+                        type="radio"
+                        name="preset"
+                        value="{{ name }}"
+                        {{ "checked" if name == "web" else "" }}
+                    >
+                    <span class="card-inner">
+                        <strong>{{ name }}</strong>
+                        <span>{{ descriptions.get(name, groups|join(", ")) }}</span>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="app_name">App name</label>
+            <input type="text" id="app_name" name="app_name" placeholder="Defaults to the file name">
+            <p class="field-hint">Used as the name in site.webmanifest — only read by presets that include one (pwa, everything).</p>
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label for="theme_color">Theme color</label>
+                <input type="color" id="theme_color" name="theme_color" value="#ffffff">
+            </div>
+            <div class="field">
+                <label for="background_color">Background color</label>
+                <input type="color" id="background_color" name="background_color" value="#ffffff">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Generate &amp; download zip</button>
+    </form>
+</section>
+{% endblock %}

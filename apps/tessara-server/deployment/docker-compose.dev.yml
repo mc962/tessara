@@ -1,0 +1,33 @@
+# DEVELOPMENT stack — builds tessara-core from local source via the uv
+# workspace, SQLite. See docker-compose.yml for production (Postgres,
+# published tessara-core).
+#
+# Run from this directory with:
+#   docker compose -f docker-compose.dev.yml up --build
+
+services:
+  tessara-server:
+    build:
+      context: ../../..
+      dockerfile: apps/tessara-server/deployment/Dockerfile.dev
+    container_name: tessara-server-dev
+    environment:
+      APP_ENV: lcl
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE__KIND: sqlite
+      DATABASE__PATH: /data/tessara.db
+      # Required — gunicorn will still start without it, but sessions won't
+      # survive a restart. Generate one with: python3 -c "import secrets; print(secrets.token_hex(32))"
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+      # Set this to your reverse proxy's IP if tessara-server sits behind one
+      # (nginx, Caddy, Traefik, ...); leave empty for a direct port mapping.
+      TRUSTED_PROXY_IP: ${TRUSTED_PROXY_IP:-}
+    ports:
+      - "${TESSARA_PORT:-8123}:8000"
+    volumes:
+      - tessara_data:/data
+    restart: unless-stopped
+
+volumes:
+  tessara_data:

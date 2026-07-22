@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ settings.page_title }}{% endblock %}</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta property="og:image" content="/opengraph.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="/opengraph.png">
+    <link rel="stylesheet" href="{{ asset('app.css') }}">
+    <script src="{{ asset('app.js') }}" defer></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="/" class="site-title">
+                <span class="tile-mark"><span></span><span></span><span></span><span></span></span>
+                {{ settings.page_title }}
+            </a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/generate">Generate</a>
+                <a href="/docs">API</a>
+                <a href="/admin/api-keys">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% set flash = request.query_params.get('flash') %}
+        {% set flash_error = request.query_params.get('error') %}
+        {% if flash %}
+        <div class="flash flash-success"><p>{{ flash }}</p></div>
+        {% elif flash_error %}
+        <div class="flash flash-error"><p>{{ flash_error }}</p></div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Tessara v{{ settings.application_version }}</p>
+        </div>
+    </footer>
+</body>
+</html>
