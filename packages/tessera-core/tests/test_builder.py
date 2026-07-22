@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import zipfile
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -133,6 +135,18 @@ def test_generate_unknown_group_raises(sample_svg: Path) -> None:
     builder = BrandAssetBuilder(sample_svg)
     with pytest.raises(UnknownAssetGroupError):
         builder.generate(["not-a-real-group"])
+
+
+def test_write_zip_matches_write(sample_svg: Path, tmp_path: Path) -> None:
+    output_dir = tmp_path / "output"
+    builder = BrandAssetBuilder(sample_svg).generate(["favicon", "apple"])
+    written = builder.write(output_dir)
+
+    zip_bytes = BrandAssetBuilder(sample_svg).generate(["favicon", "apple"]).write_zip()
+    with zipfile.ZipFile(BytesIO(zip_bytes)) as archive:
+        assert set(archive.namelist()) == {p.name for p in written}
+        for path in written:
+            assert archive.read(path.name) == path.read_bytes()
 
 
 def test_write_is_deterministic(sample_svg: Path, tmp_path: Path) -> None:

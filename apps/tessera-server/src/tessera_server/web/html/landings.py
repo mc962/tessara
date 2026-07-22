@@ -5,6 +5,7 @@ import os
 
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
+from tessera import PRESETS
 
 from tessera_server.configuration.settings import application_settings
 from tessera_server.constants import PROJECT_ROOT
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(include_in_schema=False, tags=["ui"])
 
-_CTX = {"settings": application_settings}
+_CTX = {"settings": application_settings, "presets": PRESETS}
 
 
 @router.get("/favicon.ico", include_in_schema=False)

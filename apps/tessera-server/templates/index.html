@@ -1,9 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}{{ settings.page_title }} — Status{% endblock %}
+{% block title %}{{ settings.page_title }} — brand assets from one logo{% endblock %}
 
 {% block content %}
+<div class="hero">
+    <div class="eyebrow">
+        <span class="tile-mark"><span></span><span></span><span></span><span></span></span>
+        tessera
+    </div>
+    <h1>One logo. Every size it's asked for.</h1>
+    <p class="lede">
+        Upload an SVG or PNG once. Tessera cuts it into the favicons, touch
+        icons, and social cards every platform expects, and hands you back
+        a zip — no ImageMagick incantations required.
+    </p>
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="/generate">Sign in to generate assets</a>
+        <a class="btn" href="/docs">API docs</a>
+    </div>
 
-<h1>Tessera</h1>
+    <div class="tile-strip" aria-hidden="true">
+        <div class="tile"><div class="swatch tile-swatch-1" style="width:16px;height:16px"></div><span class="label">16×16</span></div>
+        <div class="tile"><div class="swatch tile-swatch-2" style="width:24px;height:24px"></div><span class="label">32×32</span></div>
+        <div class="tile"><div class="swatch tile-swatch-3" style="width:32px;height:32px"></div><span class="label">48×48</span></div>
+        <div class="tile"><div class="swatch tile-swatch-4" style="width:52px;height:52px"></div><span class="label">180×180</span></div>
+        <div class="tile"><div class="swatch tile-swatch-1" style="width:60px;height:60px"></div><span class="label">512×512</span></div>
+        <div class="tile"><div class="swatch tile-swatch-2" style="width:72px;height:38px"></div><span class="label">1200×630</span></div>
+    </div>
+</div>
 
+<section class="card">
+    <h3>Presets</h3>
+    <table>
+        <thead>
+            <tr><th>Preset</th><th>Produces</th></tr>
+        </thead>
+        <tbody>
+            {% for name, groups in presets.items() %}
+            <tr>
+                <td><code>{{ name }}</code></td>
+                <td class="muted">{{ groups|join(", ") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
 {% endblock %}

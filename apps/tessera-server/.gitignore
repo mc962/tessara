@@ -58,6 +58,8 @@ htmlcov/
 
 # Assets
 node_modules/
+*.min.js
+
 
 # SQLite database
 data/*.db

@@ -4,17 +4,14 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from tessera import BrandAssetBuilder, UnknownAssetGroupError, UnsupportedSourceFormatError
+from tessera import (
+    PRESETS,
+    BrandAssetBuilder,
+    UnknownAssetGroupError,
+    UnsupportedSourceFormatError,
+)
 
 app = typer.Typer(help="tessera: generate platform-specific brand assets from a source image.")
-
-# Preset -> asset groups.
-PRESETS: dict[str, list[str]] = {
-    "web": ["favicon", "apple"],
-    "pwa": ["favicon", "apple", "android", "webmanifest"],
-    "social": ["favicon", "opengraph"],
-    "everything": ["favicon", "apple", "android", "webmanifest", "opengraph"],
-}
 
 
 @app.command()

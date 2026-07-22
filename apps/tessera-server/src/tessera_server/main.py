@@ -18,6 +18,7 @@ from tessera_server.web.api import health as health_router
 from tessera_server.web.api import metrics as metrics_router
 from tessera_server.web.dependencies.auth import AdminLoginRequired
 from tessera_server.web.html import admin as admin_router
+from tessera_server.web.html import generate as generate_router
 from tessera_server.web.html import landings as landings_router
 
 
@@ -53,7 +54,10 @@ app.add_middleware(
 
 
 @app.exception_handler(AdminLoginRequired)
-async def admin_login_redirect(_: Request, __: AdminLoginRequired) -> RedirectResponse:
+async def admin_login_redirect(request: Request, __: AdminLoginRequired) -> RedirectResponse:
+    next_path = request.url.path
+    if next_path and next_path != "/admin/login":
+        return RedirectResponse(f"/admin/login?next={next_path}", status_code=303)
     return RedirectResponse("/admin/login", status_code=303)
 
 
@@ -61,6 +65,7 @@ app.include_router(health_router.router)
 app.include_router(metrics_router.router)
 app.include_router(api_keys_router.router)
 app.include_router(admin_router.router)
+app.include_router(generate_router.router)
 app.include_router(landings_router.router)
 
 

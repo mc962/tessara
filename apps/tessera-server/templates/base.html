@@ -6,14 +6,19 @@
     <title>{% block title %}{{ settings.page_title }}{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', path='images/favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
-    <script src="{{ url_for('static', path='js/app.js') }}"></script>
+    <script src="{{ url_for('static', path='js/htmx.min.js') }}" defer></script>
+    <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
 </head>
 <body>
     <header>
         <div class="container">
-            <a href="/" class="site-title">{{ settings.page_title }}</a>
+            <a href="/" class="site-title">
+                <span class="tile-mark"><span></span><span></span><span></span><span></span></span>
+                {{ settings.page_title }}
+            </a>
             <nav>
                 <a href="/">Home</a>
+                <a href="/generate">Generate</a>
                 <a href="/docs">API</a>
                 <a href="/admin/api-keys">Admin</a>
             </nav>
