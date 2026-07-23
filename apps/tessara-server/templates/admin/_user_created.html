@@ -1,0 +1,7 @@
+{% include "admin/_user_row.html" %}
+<div id="new-user-banner" hx-swap-oob="true">
+    <div class="alert alert-ok">
+        <strong>User "{{ user.email }}" created</strong> and marked verified — they can sign in with the password you set.
+    </div>
+</div>
+<div id="empty-row" hx-swap-oob="delete"></div>

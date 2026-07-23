@@ -2,6 +2,49 @@
 
 ## Done
 
+- `tessara-server`: replaced the single `ApiKey` model (which doubled as both
+  a human login credential and a machine Bearer token) with a proper
+  two-tier scheme — `User` accounts (email + Argon2 password,
+  `is_superuser`/`is_active`/`is_verified`) for browser/admin login, and a
+  separate `ApiToken` model (FK'd to a user, up to `max_api_tokens_per_user`
+  = 20 by default) for CLI/API Bearer access. Self-service signup requires
+  email verification; the admin UI and `tessara-server-admin` CLI can also
+  create pre-verified users directly. Any logged-in user manages their own
+  tokens at `/account/tokens`; a superuser can additionally manage any
+  user's tokens at `/admin/users/{id}/tokens`. No `fastapi-users` dependency
+  — it's in maintainer-declared maintenance mode (Oct 2025 notice: critical
+  bug fixes only, no new features, unreleased successor), so this is
+  hand-rolled on the existing FastAPI/SQLAlchemy/itsdangerous/argon2-cffi
+  stack instead. Email verification and password-reset links are signed,
+  stateless tokens (itsdangerous, embedding a nonce derived from the
+  user's current password hash) — no token table, and a password
+  change/reset invalidates outstanding links and sessions for free. SMTP is
+  optional: unset `smtp_host` degrades to logging the verification/reset
+  link instead of failing, so the server works out of the box without a
+  mail server configured (homelab use). Clean-cutover migration — the old
+  `api_keys` table is dropped, no backward compatibility, since there was
+  no real deployment yet to migrate. `tessara-cli`/`/api/generate` needed
+  no changes — a token is still just an opaque `tsa_`-prefixed Bearer
+  string from their point of view.
+
+- `tessara-server`: CSRF protection for every cookie-session-authenticated
+  state-changing route (`web/csrf.py`) — double-submit cookie pattern.
+  `CsrfCookieMiddleware` ensures a `tessara_csrf` cookie exists on every
+  request and exposes it as `request.state.csrf_token` for templates;
+  plain HTML forms embed it as a hidden `csrf_token` field, htmx requests
+  (bare `hx-post` buttons with no form body) get it via a global
+  `X-CSRF-Token` header set in `base.html`'s `htmx:configRequest` handler.
+  The `verify_csrf` dependency, added explicitly to each mutating route
+  (not router-wide, since GET routes and Bearer/JSON API routes must not be
+  checked), requires the submitted value to match the cookie. Bearer-token
+  routes (`/api/generate`, `/api/api-tokens`) are exempt by design — no
+  ambient cookie credential means no CSRF exposure there. Previously the
+  only mitigation was `SameSite=Lax` on the session cookie, identified
+  earlier as a gap and closed once cookie-session login became the primary
+  browser auth path (see the `User`/`ApiToken` entry above). Also restored
+  the "Sign out" control, which had been dropped from the nav when the old
+  `admin/api_keys.html` (which used to host it) was replaced.
+
 - `tessara-core`: `favicon`, `apple`, `android`, `opengraph` asset groups, plus
   `webmanifest` (JSON, depends on `android`). Deterministic PNG/ICO output,
   aspect-ratio-preserving SVG/PNG rendering, transparent or opaque-background

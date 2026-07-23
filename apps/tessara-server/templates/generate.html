@@ -12,6 +12,7 @@
 
 <section class="card">
     <form id="generate-form" method="post" action="/generate" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
         <div class="field">
             <label for="source">Source image</label>
             <input type="file" id="source" name="source" accept=".svg,.png" required>

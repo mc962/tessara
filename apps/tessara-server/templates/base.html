@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ request.state.csrf_token }}">
     <title>{% block title %}{{ settings.page_title }}{% endblock %}</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -28,7 +29,12 @@
                 <a href="/">Home</a>
                 <a href="/generate">Generate</a>
                 <a href="/docs">API</a>
-                <a href="/admin/api-keys">Admin</a>
+                <a href="/account/tokens">API Tokens</a>
+                <a href="/admin/users">Admin</a>
+                <form method="post" action="/logout" class="nav-form">
+                    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+                    <button type="submit" class="btn-link">Sign out</button>
+                </form>
             </nav>
         </div>
     </header>
@@ -49,5 +55,11 @@
             <p>Tessara v{{ settings.application_version }}</p>
         </div>
     </footer>
+
+    <script>
+        document.body.addEventListener("htmx:configRequest", function (evt) {
+            evt.detail.headers["X-CSRF-Token"] = document.querySelector('meta[name="csrf-token"]').content;
+        });
+    </script>
 </body>
 </html>

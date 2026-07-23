@@ -16,12 +16,15 @@ from tessara_server.configuration.logging_config import configure_logging
 from tessara_server.configuration.settings import application_settings
 from tessara_server.constants import PROJECT_ROOT
 from tessara_server.data.database.connection import get_sessionmanager
-from tessara_server.web.api import api_keys as api_keys_router
+from tessara_server.web.api import api_tokens as api_tokens_router
 from tessara_server.web.api import generate as generate_api_router
 from tessara_server.web.api import health as health_router
 from tessara_server.web.api import metrics as metrics_router
+from tessara_server.web.csrf import CsrfCookieMiddleware
 from tessara_server.web.dependencies.auth import AdminLoginRequired
+from tessara_server.web.html import account as account_router
 from tessara_server.web.html import admin as admin_router
+from tessara_server.web.html import auth as auth_router
 from tessara_server.web.html import generate as generate_router
 from tessara_server.web.html import landings as landings_router
 from tessara_server.web.rate_limit import limiter
@@ -56,6 +59,7 @@ app = FastAPI(
 app.add_middleware(
     ProxyHeadersMiddleware, trusted_hosts=[application_settings.trusted_proxy_ip]
 )
+app.add_middleware(CsrfCookieMiddleware)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -65,16 +69,18 @@ app.add_middleware(SlowAPIMiddleware)
 @app.exception_handler(AdminLoginRequired)
 async def admin_login_redirect(request: Request, __: AdminLoginRequired) -> RedirectResponse:
     next_path = request.url.path
-    if next_path and next_path != "/admin/login":
-        return RedirectResponse(f"/admin/login?next={next_path}", status_code=303)
-    return RedirectResponse("/admin/login", status_code=303)
+    if next_path and next_path != "/login":
+        return RedirectResponse(f"/login?next={next_path}", status_code=303)
+    return RedirectResponse("/login", status_code=303)
 
 
 app.include_router(health_router.router)
 app.include_router(metrics_router.router)
-app.include_router(api_keys_router.router)
+app.include_router(api_tokens_router.router)
 app.include_router(generate_api_router.router)
+app.include_router(auth_router.router)
 app.include_router(admin_router.router)
+app.include_router(account_router.router)
 app.include_router(generate_router.router)
 app.include_router(landings_router.router)
 

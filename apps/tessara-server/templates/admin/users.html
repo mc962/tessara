@@ -1,26 +1,24 @@
 {% extends "base.html" %}
-{% block title %}API Keys — {{ settings.project_name }}{% endblock %}
+{% block title %}Users — {{ settings.project_name }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>API Keys</h2>
-    <form method="post" action="/admin/logout">
-        <button type="submit" class="btn-link">Sign out</button>
-    </form>
+    <h2>Users</h2>
 </div>
 
-<div id="new-key-banner"></div>
+<div id="new-user-banner"></div>
 
 <section class="card">
-    <h3>Create key</h3>
+    <h3>Create user</h3>
     <form
         class="inline-form"
-        hx-post="/admin/api-keys"
-        hx-target="#keys-tbody"
+        hx-post="/admin/users"
+        hx-target="#users-tbody"
         hx-swap="afterbegin"
         hx-on::after-request="if(event.detail.successful) this.reset()"
     >
-        <input type="text" name="name" placeholder="Key name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Initial password" required minlength="8">
         <label class="checkbox-label">
             <input type="checkbox" name="is_superuser"> Superuser
         </label>
@@ -29,26 +27,26 @@
             <span class="htmx-indicator">…</span>
         </button>
     </form>
+    <p class="field-hint">Admin-created users are marked verified immediately — no email sent.</p>
 </section>
 
 <section class="card">
     <table>
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Prefix</th>
+                <th>Email</th>
                 <th>Superuser</th>
                 <th>Active</th>
-                <th>Last used</th>
+                <th>Verified</th>
                 <th>Created</th>
                 <th></th>
             </tr>
         </thead>
-        <tbody id="keys-tbody">
-            {% for key in keys %}
-                {% include "admin/_key_row.html" %}
+        <tbody id="users-tbody">
+            {% for user in users %}
+                {% include "admin/_user_row.html" %}
             {% else %}
-            <tr id="empty-row"><td colspan="7" class="muted">No keys yet.</td></tr>
+            <tr id="empty-row"><td colspan="6" class="muted">No users yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

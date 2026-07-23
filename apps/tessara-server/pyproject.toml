@@ -5,6 +5,7 @@ description = "FastAPI server for tessara asset generation."
 requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.13.5",
+    "aiosmtplib>=4.0.0",
     "alembic>=1.18.4",
     "argon2-cffi>=25.1.0",
     "tessara>=0.1.0,<0.2",

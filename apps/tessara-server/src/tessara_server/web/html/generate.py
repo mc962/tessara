@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from tessara import PRESETS
 
@@ -14,6 +14,7 @@ from tessara_server.service.generation import (
     generate_zip,
     max_upload_bytes,
 )
+from tessara_server.web.csrf import verify_csrf
 from tessara_server.web.dependencies.auth import SessionDependency
 from tessara_server.web.rate_limit import limiter
 from tessara_server.web.templates import templates
@@ -37,7 +38,8 @@ async def get_generate(
 @limiter.limit(application_settings.rate_limit_generate)
 async def post_generate(
     request: Request,
-    key: SessionDependency,
+    user: SessionDependency,
+    _csrf: Annotated[None, Depends(verify_csrf)],
     source: Annotated[UploadFile, File()],
     preset: Annotated[str, Form()] = "web",
     app_name: Annotated[str, Form()] = "",
@@ -53,7 +55,7 @@ async def post_generate(
             app_name=app_name,
             theme_color=theme_color,
             background_color=background_color,
-            max_bytes=max_upload_bytes(key.is_superuser),
+            max_bytes=max_upload_bytes(user.is_superuser),
         )
     except UploadTooLargeError as exc:
         return templates.TemplateResponse(

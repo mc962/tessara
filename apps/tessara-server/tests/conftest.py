@@ -16,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tessara_server.main import app
 from tessara_server.data.database.dependencies import get_db_session
 from tessara_server.web.dependencies.auth import (
-    require_api_key,
+    require_bearer_token,
     require_session,
     require_superuser_any,
-    require_superuser_api_key,
+    require_superuser_bearer_token,
     require_superuser_session,
 )
 from tessara_server.web.rate_limit import limiter
@@ -35,19 +35,34 @@ def _reset_rate_limiter():
     limiter.reset()
 
 
-def make_mock_key(is_superuser: bool = True, is_active: bool = True) -> MagicMock:
-    key = MagicMock()
-    key.id = 1
-    key.name = "test-key"
-    key.key_prefix = "tsa_1234"
-    key.is_superuser = is_superuser
-    key.is_active = is_active
-    return key
+def make_mock_user(is_superuser: bool = True, is_active: bool = True, is_verified: bool = True) -> MagicMock:
+    user = MagicMock()
+    user.id = 1
+    user.email = "test@example.com"
+    user.password_hash = "hashed"
+    user.is_superuser = is_superuser
+    user.is_active = is_active
+    user.is_verified = is_verified
+    return user
 
 
 @pytest.fixture
 def mock_db() -> AsyncMock:
     return AsyncMock(spec=AsyncSession)
+
+
+@pytest.fixture
+def csrf_headers():
+    """Primes a TestClient's CSRF cookie (via a throwaway GET, since
+    CsrfCookieMiddleware runs for every request) and returns headers to
+    attach that token to a subsequent state-changing POST — mirrors how a
+    real browser picks the token up from a page it already loaded."""
+
+    def _make(client) -> dict:
+        client.get("/health")
+        return {"X-CSRF-Token": client.cookies.get("tessara_csrf")}
+
+    return _make
 
 
 @pytest.fixture
@@ -61,23 +76,23 @@ def sample_svg_bytes() -> bytes:
 @pytest.fixture
 def api_client(mock_db: AsyncMock):
     """TestClient with DB and auth overridden."""
-    mock_key = make_mock_key()
+    mock_user = make_mock_user()
 
     async def _db():
         yield mock_db
 
     async def _auth():
-        return mock_key
+        return mock_user
 
     async def _superuser_auth():
-        return mock_key
+        return mock_user
 
     async def _session():
-        return mock_key
+        return mock_user
 
     app.dependency_overrides[get_db_session] = _db
-    app.dependency_overrides[require_api_key] = _auth
-    app.dependency_overrides[require_superuser_api_key] = _superuser_auth
+    app.dependency_overrides[require_bearer_token] = _auth
+    app.dependency_overrides[require_superuser_bearer_token] = _superuser_auth
     app.dependency_overrides[require_superuser_any] = _superuser_auth
     app.dependency_overrides[require_session] = _session
     app.dependency_overrides[require_superuser_session] = _session
@@ -90,20 +105,20 @@ def api_client(mock_db: AsyncMock):
 
 @pytest.fixture
 def regular_api_client(mock_db: AsyncMock):
-    """Like api_client, but the authenticated key is a non-superuser one."""
-    mock_key = make_mock_key(is_superuser=False)
+    """Like api_client, but the authenticated user is a non-superuser one."""
+    mock_user = make_mock_user(is_superuser=False)
 
     async def _db():
         yield mock_db
 
     async def _auth():
-        return mock_key
+        return mock_user
 
     async def _session():
-        return mock_key
+        return mock_user
 
     app.dependency_overrides[get_db_session] = _db
-    app.dependency_overrides[require_api_key] = _auth
+    app.dependency_overrides[require_bearer_token] = _auth
     app.dependency_overrides[require_session] = _session
 
     with TestClient(app, raise_server_exceptions=False) as client:

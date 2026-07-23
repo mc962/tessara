@@ -1,0 +1,45 @@
+<tr id="user-row-{{ user.id }}">
+    <td>{{ user.email }}</td>
+    <td>
+        {% if user.is_superuser %}
+            <span class="badge badge-ok">yes</span>
+        {% else %}
+            <span class="muted">—</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if user.is_active %}
+            <span class="badge badge-ok">active</span>
+        {% else %}
+            <span class="badge badge-warn">disabled</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if user.is_verified %}
+            <span class="badge badge-ok">verified</span>
+        {% else %}
+            <span class="muted">unverified</span>
+        {% endif %}
+    </td>
+    <td>{{ user.created_at.strftime("%Y-%m-%d") }}</td>
+    <td class="row-actions">
+        <a href="/admin/users/{{ user.id }}/tokens">Tokens</a>
+        <button
+            hx-post="/admin/users/{{ user.id }}/toggle-superuser"
+            hx-target="#user-row-{{ user.id }}"
+            hx-swap="outerHTML"
+        >{{ "Remove superuser" if user.is_superuser else "Make superuser" }}</button>
+        <button
+            hx-post="/admin/users/{{ user.id }}/toggle-active"
+            hx-target="#user-row-{{ user.id }}"
+            hx-swap="outerHTML"
+        >{{ "Disable" if user.is_active else "Enable" }}</button>
+        <button
+            class="btn-danger"
+            hx-post="/admin/users/{{ user.id }}/delete"
+            hx-target="#user-row-{{ user.id }}"
+            hx-swap="outerHTML swap:0.15s"
+            hx-confirm="Delete user {{ user.email }}?"
+        >Delete</button>
+    </td>
+</tr>

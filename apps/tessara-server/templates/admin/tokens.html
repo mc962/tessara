@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ target_user.email }}'s tokens — {{ settings.project_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>API tokens — {{ target_user.email }}</h2>
+    <a href="/admin/users" class="btn-link">Back to users</a>
+</div>
+
+<div id="new-token-banner"></div>
+
+<section class="card">
+    <h3>Create token</h3>
+    <form
+        class="inline-form"
+        hx-post="/admin/users/{{ target_user.id }}/tokens"
+        hx-target="#tokens-tbody"
+        hx-swap="afterbegin"
+        hx-on::after-request="if(event.detail.successful) this.reset()"
+    >
+        <input type="text" name="name" placeholder="Token label" required>
+        <button type="submit" class="btn-primary">
+            Create
+            <span class="htmx-indicator">…</span>
+        </button>
+    </form>
+</section>
+
+<section class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Label</th>
+                <th>Prefix</th>
+                <th>Active</th>
+                <th>Last used</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tokens-tbody">
+            {% for token in tokens %}
+                {% include "admin/_token_row.html" %}
+            {% else %}
+            <tr id="empty-row"><td colspan="6" class="muted">No tokens yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

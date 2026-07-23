@@ -1,131 +1,155 @@
-"""Admin UI — API key management."""
+"""Admin UI — user management, and per-user API token management (superuser-only).
+
+Self-service token management for a user's *own* tokens lives in
+web/html/account.py instead — this file is for a superuser managing anyone.
+"""
 
 import logging
-from typing import Union
+from typing import Annotated
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse
 
 from tessara_server.configuration.settings import application_settings
 from tessara_server.data.database.dependencies import DatabaseSessionDependency
-from tessara_server.data.repository import api_key_repository
-from tessara_server.web.dependencies.auth import (
-    SuperuserSessionDependency,
-    _SESSION_COOKIE,
-    make_session_cookie,
-)
-from tessara_server.web.rate_limit import limiter
+from tessara_server.data.repository import api_token_repository, user_repository
+from tessara_server.web.csrf import verify_csrf
+from tessara_server.web.dependencies.auth import SuperuserSessionDependency
 from tessara_server.web.templates import templates
+
+CsrfDependency = Annotated[None, Depends(verify_csrf)]
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"])
 
 _CTX = {"settings": application_settings}
 
 
-def _safe_next(next_path: str | None) -> str:
-    if next_path and next_path.startswith("/") and not next_path.startswith("//"):
-        return next_path
-    # Not /admin/api-keys — that's superuser-only and a non-superuser key
-    # would just bounce straight back to the login page.
-    return "/generate"
-
-
-@router.get("/admin/login", response_class=HTMLResponse)
-async def get_login(
-    request: Request, error: str | None = None, next: str | None = None
-) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request, "admin/login.html", {**_CTX, "error": error, "next": next}
-    )
-
-
-@router.post("/admin/login", response_model=None)
-@limiter.limit(application_settings.rate_limit_login)
-async def post_login(
-    request: Request,
-    session: DatabaseSessionDependency,
-    api_key: str = Form(...),
-    next: str = Form(""),
-) -> Union[HTMLResponse, RedirectResponse]:
-    key = await api_key_repository.verify_key(session, api_key)
-    if not key:
-        return templates.TemplateResponse(
-            request,
-            "admin/login.html",
-            {**_CTX, "error": "Invalid or inactive API key", "next": next},
-            status_code=401,
-        )
-    token = make_session_cookie(key.id)
-    response = RedirectResponse(_safe_next(next), status_code=303)
-    response.set_cookie(
-        _SESSION_COOKIE,
-        token,
-        httponly=True,
-        samesite="lax",
-        max_age=application_settings.session_max_age,
-    )
-    return response
-
-
-@router.post("/admin/logout")
-async def post_logout() -> RedirectResponse:
-    response = RedirectResponse("/admin/login", status_code=303)
-    response.delete_cookie(_SESSION_COOKIE)
-    return response
-
-
-@router.get("/admin/api-keys", response_class=HTMLResponse)
-async def get_api_keys(
+@router.get("/users", response_class=HTMLResponse)
+async def get_users(
     request: Request,
     session: DatabaseSessionDependency,
     _: SuperuserSessionDependency,
 ) -> HTMLResponse:
-    keys = await api_key_repository.list_all(session)
-    return templates.TemplateResponse(
-        request,
-        "admin/api_keys.html",
-        {
-            **_CTX,
-            "keys": keys,
-        },
-    )
+    users = await user_repository.list_all(session)
+    return templates.TemplateResponse(request, "admin/users.html", {**_CTX, "users": users})
 
 
-@router.post("/admin/api-keys", response_class=HTMLResponse)
-async def create_api_key(
+@router.post("/users", response_class=HTMLResponse)
+async def create_user(
     request: Request,
     session: DatabaseSessionDependency,
     _: SuperuserSessionDependency,
-    name: str = Form(...),
+    _csrf: CsrfDependency,
+    email: str = Form(...),
+    password: str = Form(...),
     is_superuser: bool = Form(False),
 ) -> HTMLResponse:
-    key, plaintext = await api_key_repository.create(session, name, is_superuser=is_superuser)
+    if await user_repository.get_by_email(session, email):
+        raise HTTPException(status_code=400, detail="A user with that email already exists")
+    user = await user_repository.create(
+        session, email, password, is_superuser=is_superuser, is_verified=True
+    )
     return templates.TemplateResponse(
-        request,
-        "admin/_key_created.html",
-        {**_CTX, "key": key, "plaintext": plaintext},
+        request, "admin/_user_created.html", {**_CTX, "user": user}
     )
 
 
-@router.post("/admin/api-keys/{key_id}/toggle", response_class=HTMLResponse)
-async def toggle_api_key(
+@router.post("/users/{user_id}/toggle-active", response_class=HTMLResponse)
+async def toggle_user_active(
     request: Request,
-    key_id: int,
+    user_id: int,
+    session: DatabaseSessionDependency,
+    _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+) -> HTMLResponse:
+    await user_repository.toggle_active(session, user_id)
+    user = await user_repository.get_by_id(session, user_id)
+    return templates.TemplateResponse(request, "admin/_user_row.html", {**_CTX, "user": user})
+
+
+@router.post("/users/{user_id}/toggle-superuser", response_class=HTMLResponse)
+async def toggle_user_superuser(
+    request: Request,
+    user_id: int,
+    session: DatabaseSessionDependency,
+    _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+) -> HTMLResponse:
+    await user_repository.toggle_superuser(session, user_id)
+    user = await user_repository.get_by_id(session, user_id)
+    return templates.TemplateResponse(request, "admin/_user_row.html", {**_CTX, "user": user})
+
+
+@router.post("/users/{user_id}/delete", response_class=HTMLResponse)
+async def delete_user(
+    user_id: int,
+    session: DatabaseSessionDependency,
+    _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+) -> HTMLResponse:
+    await user_repository.delete(session, user_id)
+    return HTMLResponse("")
+
+
+@router.get("/users/{user_id}/tokens", response_class=HTMLResponse)
+async def get_user_tokens(
+    request: Request,
+    user_id: int,
     session: DatabaseSessionDependency,
     _: SuperuserSessionDependency,
 ) -> HTMLResponse:
-    await api_key_repository.toggle_active(session, key_id)
-    key = await api_key_repository.get_by_id(session, key_id)
-    return templates.TemplateResponse(request, "admin/_key_row.html", {**_CTX, "key": key})
+    user = await user_repository.get_by_id(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    tokens = await api_token_repository.list_for_user(session, user_id)
+    return templates.TemplateResponse(
+        request, "admin/tokens.html", {**_CTX, "target_user": user, "tokens": tokens}
+    )
 
 
-@router.post("/admin/api-keys/{key_id}/delete", response_class=HTMLResponse)
-async def delete_api_key(
-    key_id: int,
+@router.post("/users/{user_id}/tokens", response_class=HTMLResponse)
+async def create_user_token(
+    request: Request,
+    user_id: int,
     session: DatabaseSessionDependency,
     _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+    name: str = Form(...),
 ) -> HTMLResponse:
-    await api_key_repository.delete(session, key_id)
+    user = await user_repository.get_by_id(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if await api_token_repository.count_for_user(session, user_id) >= application_settings.max_api_tokens_per_user:
+        raise HTTPException(status_code=400, detail="This user has reached the API token limit")
+    token, plaintext = await api_token_repository.create(session, user_id, name)
+    return templates.TemplateResponse(
+        request, "admin/_token_created.html", {**_CTX, "token": token, "plaintext": plaintext}
+    )
+
+
+@router.post("/users/{user_id}/tokens/{token_id}/toggle", response_class=HTMLResponse)
+async def toggle_user_token(
+    request: Request,
+    user_id: int,
+    token_id: int,
+    session: DatabaseSessionDependency,
+    _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+) -> HTMLResponse:
+    await api_token_repository.toggle_active(session, token_id)
+    token = await api_token_repository.get_by_id(session, token_id)
+    return templates.TemplateResponse(request, "admin/_token_row.html", {**_CTX, "token": token})
+
+
+@router.post("/users/{user_id}/tokens/{token_id}/delete", response_class=HTMLResponse)
+async def delete_user_token(
+    user_id: int,
+    token_id: int,
+    session: DatabaseSessionDependency,
+    _: SuperuserSessionDependency,
+    _csrf: CsrfDependency,
+) -> HTMLResponse:
+    await api_token_repository.delete(session, token_id)
     return HTMLResponse("")

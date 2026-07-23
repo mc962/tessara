@@ -1,0 +1,8 @@
+{% include "account/_token_row.html" %}
+<div id="new-token-banner" hx-swap-oob="true">
+    <div class="alert alert-ok">
+        <strong>Token created for "{{ token.name }}".</strong> Copy it now — it will not be shown again.
+        <code class="key-display">{{ plaintext }}</code>
+    </div>
+</div>
+<div id="empty-row" hx-swap-oob="delete"></div>

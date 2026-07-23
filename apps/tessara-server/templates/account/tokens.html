@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}My API tokens — {{ settings.project_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>My API tokens</h2>
+</div>
+
+<div id="new-token-banner"></div>
+
+<section class="card">
+    <h3>Create token</h3>
+    <form
+        class="inline-form"
+        hx-post="/account/tokens"
+        hx-target="#tokens-tbody"
+        hx-swap="afterbegin"
+        hx-on::after-request="if(event.detail.successful) this.reset()"
+    >
+        <input type="text" name="name" placeholder="e.g. laptop, homelab CLI" required>
+        <button type="submit" class="btn-primary">
+            Create
+            <span class="htmx-indicator">…</span>
+        </button>
+    </form>
+    <p class="field-hint">Use a token with the CLI (`tessara web generate --api-key ...`) or the `/api/generate` API. Up to {{ max_tokens }} tokens per account.</p>
+</section>
+
+<section class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Label</th>
+                <th>Prefix</th>
+                <th>Active</th>
+                <th>Last used</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tokens-tbody">
+            {% for token in tokens %}
+                {% include "account/_token_row.html" %}
+            {% else %}
+            <tr id="empty-row"><td colspan="6" class="muted">No tokens yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

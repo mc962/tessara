@@ -115,15 +115,33 @@ class Common(BaseSettings):
     # Auth
     session_secret: SecretStr = SecretStr("")
     session_max_age: int = 86400  # 24 hours
+    verification_token_max_age: int = 86400 * 3  # 3 days
+    password_reset_token_max_age: int = 3600  # 1 hour
+    max_api_tokens_per_user: int = 20
+
+    # Email — used for verification/password-reset links. If smtp_host is
+    # unset, send_email() logs the message instead of sending it, so the
+    # server still works without SMTP configured (e.g. homelab dev).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_use_tls: bool = True
+    smtp_from_address: str = "noreply@tessara.local"
+
+    # Public base URL — used to build absolute links in emails.
+    public_base_url: str = "http://localhost:8000"
 
     # Uploads — /generate and /api/generate. Superuser keys get a larger cap;
     # regular keys are capped low since generation is open to any active key.
     upload_max_bytes: int = 2 * 1024 * 1024  # 2 MB
     upload_max_bytes_superuser: int = 20 * 1024 * 1024  # 20 MB
 
-    # Rate limiting — applies to /generate, /api/generate, and /admin/login.
+    # Rate limiting — applies to /generate, /api/generate, and /login.
     rate_limit_generate: str = "10/minute"
     rate_limit_login: str = "5/minute"
+    rate_limit_signup: str = "5/minute"
+    rate_limit_forgot_password: str = "5/minute"
 
     @property
     def database_connection_string(self) -> str:
@@ -153,6 +171,12 @@ def load_settings(env: str) -> Common:
 
     if not settings.session_secret.get_secret_value():
         _log.warning("SESSION_SECRET is not set — sessions will not survive restarts.")
+
+    if not settings.smtp_host:
+        _log.warning(
+            "SMTP_HOST is not set — verification/password-reset emails will be "
+            "logged instead of sent."
+        )
 
     return settings
 
