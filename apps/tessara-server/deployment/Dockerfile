@@ -21,7 +21,7 @@
 # ======================================
 # Stage 1: frontend assets (esbuild)
 # ======================================
-FROM node:22-slim AS frontend
+FROM node:24-slim AS frontend
 
 WORKDIR /app
 
