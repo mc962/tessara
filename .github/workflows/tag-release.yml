@@ -1,0 +1,66 @@
+name: Tag Release
+
+# Monorepo has three independently versioned packages (tessara-core,
+# tessara-cli, tessara-server). On every push to main, tag whichever ones
+# have a version in pyproject.toml that isn't tagged yet — prefixed so they
+# don't collide (tessara-v0.1.0, tessara-cli-v0.1.0, tessara-server-v0.1.0).
+#
+# Unlike the Gitea version of this workflow, GitHub Actions' built-in
+# GITHUB_TOKEN can push tags directly once the job is granted
+# `contents: write` — no deploy key needed. Signing still needs a key:
+# generate a plain SSH key (`ssh-keygen -t ed25519 -C ci-signing -f
+# ci_signing_key -N ""`), add the private key as the CI_SIGNING_KEY repo
+# secret, and register the public key on a GitHub account under Settings ->
+# SSH and GPG keys -> New SSH key, usage type "Signing Key" (not a deploy
+# key — those are push-only and don't verify signatures). CI_EMAIL/CI_NAME
+# vars below must match a verified email on that same account or GitHub
+# won't show the tag as Verified.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        package:
+          - name: tessara
+            path: packages/tessara-core
+          - name: tessara-cli
+            path: apps/tessara-cli
+          - name: tessara-server
+            path: apps/tessara-server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from pyproject.toml
+        id: version
+        run: |
+          VERSION=$(awk -F'"' '/^version/{print $2}' "${{ matrix.package.path }}/pyproject.toml")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure signing key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CI_SIGNING_KEY }}" > ~/.ssh/ci
+          chmod 600 ~/.ssh/ci
+
+      - name: Tag if not exists
+        run: |
+          TAG="${{ matrix.package.name }}-v${{ steps.version.outputs.version }}"
+          if git ls-remote --tags origin "${TAG}" | grep -q .; then
+            echo "Tag ${TAG} already exists, skipping."
+          else
+            git config user.name "${{ vars.CI_NAME }}"
+            git config user.email "${{ vars.CI_EMAIL }}"
+            git config gpg.format ssh
+            git config user.signingkey ~/.ssh/ci
+            git tag -s "${TAG}" -m "Release ${TAG}"
+            git push origin "${TAG}"
+          fi
