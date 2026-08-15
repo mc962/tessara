@@ -44,7 +44,13 @@ ENV UV_INDEX_URL=${UV_INDEX_URL} \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    # devpi indexes based on root/pypi mirror packages from PyPI lazily, on first request —
+    # a cold cache plus uv's default high download concurrency (fires many parallel requests
+    # immediately) reliably times out against it. Lower concurrency + a longer timeout gets
+    # through the cold-cache case; a warm devpi cache is fast regardless.
+    UV_CONCURRENT_DOWNLOADS=4 \
+    UV_HTTP_TIMEOUT=120
 
 # cairosvg (a tessara-core dependency) needs libcairo2's headers to build its
 # native extension at install time — the runtime stage below only needs the
