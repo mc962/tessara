@@ -39,16 +39,16 @@ FROM python:3.13-slim AS python-deps
 
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
 
+# slow indexes based on root/pypi may mirror packages from PyPI lazily, on first request —
+# a cold cache plus uv's default high download concurrency (fires many parallel requests
+# immediately) reliably times out against it. Lower concurrency + a longer timeout gets
+# through the cold-cache case; a warm devpi cache is fast regardless.
 ARG UV_INDEX_URL=https://pypi.org/simple
 ENV UV_INDEX_URL=${UV_INDEX_URL} \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # devpi indexes based on root/pypi mirror packages from PyPI lazily, on first request —
-    # a cold cache plus uv's default high download concurrency (fires many parallel requests
-    # immediately) reliably times out against it. Lower concurrency + a longer timeout gets
-    # through the cold-cache case; a warm devpi cache is fast regardless.
     UV_CONCURRENT_DOWNLOADS=4 \
     UV_HTTP_TIMEOUT=120
 
